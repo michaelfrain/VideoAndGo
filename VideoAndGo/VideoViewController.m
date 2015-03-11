@@ -135,7 +135,68 @@
         NSLog(@"Recording unsuccessful: %@", [error localizedDescription]);
     } else {
         NSLog(@"Recording successful!");
+        AVURLAsset *asset = [[AVURLAsset alloc] initWithURL:outputFileURL options:nil];
+        NSString *filename = [self createFilename];
+        NSString *filepath = [NSString stringWithFormat:@"%@/%@", [self storageLocation], filename];
+        AVAssetExportSession *session = [[AVAssetExportSession alloc] initWithAsset:asset presetName:AVAssetExportPresetHighestQuality];
+        
+        session.outputURL = [NSURL fileURLWithPath:filepath];
+        session.outputFileType = AVFileTypeMPEG4;
+        session.shouldOptimizeForNetworkUse = YES;
+        
+        [session exportAsynchronouslyWithCompletionHandler:^{
+            switch (session.status) {
+                case AVAssetExportSessionStatusCancelled:
+                    NSLog(@"Export cancelled by user.");
+                    break;
+                    
+                case AVAssetExportSessionStatusCompleted:
+                    NSLog(@"Export completed successfully.");
+                    break;
+                    
+                case AVAssetExportSessionStatusExporting:
+                    NSLog(@"Export still in progress.");
+                    break;
+                    
+                case AVAssetExportSessionStatusFailed:
+                    NSLog(@"Export failed: %@", [session.error localizedDescription]);
+                    break;
+                    
+                case AVAssetExportSessionStatusUnknown:
+                    NSLog(@"Export status unknown.");
+                    break;
+                    
+                case AVAssetExportSessionStatusWaiting:
+                    NSLog(@"Export still waiting.");
+                    break;
+            }
+        }];
     }
+}
+
+#pragma mark - Helper functions
+
+- (NSString *)createFilename {
+    NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+    [formatter setDateFormat:@"MMMdd||HH:mm:SS"];
+    NSDate *date = [NSDate date];
+    NSString *dateString = [formatter stringFromDate:date];
+    
+    NSString *fileName = [NSString stringWithFormat:@"%@.mp4", dateString];
+    
+    return fileName;
+}
+
+- (NSString *)storageLocation {
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString *documentsDirectory = [paths objectAtIndex:0];
+    NSString *dataPath = [documentsDirectory stringByAppendingPathComponent:@"/capture"];
+    
+    NSError *error;
+    if (![[NSFileManager defaultManager] fileExistsAtPath:dataPath])
+        [[NSFileManager defaultManager] createDirectoryAtPath:dataPath withIntermediateDirectories:NO attributes:nil error:&error];
+    
+    return dataPath;
 }
 
 @end
